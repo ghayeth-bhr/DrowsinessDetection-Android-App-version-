@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<resources>
+    <string name="app_name">Drowsiness Dtetection</string>
+
+    <string name="media_pipe">MediaPipe</string>
+
+    <string name="alt_bottom_sheet_chevron">Bottom sheet expandable indicator</string>
+
+    <string name="alt_bottom_sheet_max_results_button_minus">Decreasing
+        maximum face results button</string>
+    <string name="alt_bottom_sheet_max_results_button_plus">Increasing
+        maximum face results button</string>
+    <string name="alt_bottom_sheet_threshold_button_minus">Decreasing
+        threshold of face detect results button</string>
+    <string name="alt_bottom_sheet_threshold_button_plus">Increasing
+        threshold of face detect results button</string>
+    <string name="menu_camera">Camera</string>
+    <string name="menu_gallery">No Disponible</string>
+    <string name="tv_gallery_placeholder">Click + to add an image or a video
+        to begin running the face landmarker.</string>
+
+    <string name="label_inference_time">Inference Time</string>
+    <string name="label_fps">Frames per Second</string>
+    <string name="label_face_detection_confidence_threshold">Detection
+        Threshold</string>
+    <string name="label_face_tracking_confidence_threshold">Tracking
+        Threshold</string>
+    <string name="label_face_presence_confidence_threshold">Presence
+        Threshold</string>
+    <string name="label_num_faces">Number of Faces</string>
+    <string name="label_delegate">Delegate</string>
+
+    <string-array name="delegate_spinner_titles">
+        <item>CPU</item>
+        <item>GPU</item>
+    </string-array>
+    <string name="blink_count">Blinks: %d</string>
+    <string name="yawn_count">Yawns: %d</string>
+    <string name="microsleep_count">Alerts: %d</string>
+    <string name="label_ear_threshold">EAR Threshold</string>
+    <string name="label_mar_threshold">MAR Threshold</string>
+
+</resources>
