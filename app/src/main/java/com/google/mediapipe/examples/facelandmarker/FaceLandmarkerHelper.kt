@@ -1,5 +1,4 @@
 package com.google.mediapipe.examples.facelandmarker
-
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Matrix
@@ -17,7 +16,6 @@ import com.google.mediapipe.tasks.components.containers.NormalizedLandmark
 import kotlin.math.max
 import kotlin.math.sqrt
 import kotlin.math.pow
-
 class FaceLandmarkerHelper(
     var minFaceDetectionConfidence: Float = DEFAULT_FACE_DETECTION_CONFIDENCE,
     var minFaceTrackingConfidence: Float = DEFAULT_FACE_TRACKING_CONFIDENCE,
@@ -27,11 +25,8 @@ class FaceLandmarkerHelper(
     var earThreshold: Float = DEFAULT_EAR_THRESHOLD,
     var marThreshold: Float = DEFAULT_MAR_THRESHOLD,
     val context: Context,
-    val faceLandmarkerHelperListener: LandmarkerListener? = null
+    val faceLandmarkerHelperListener: LandmarkerListener? = null //LandmarkerListener interface
 ) {
-    private var faceLandmarker: FaceLandmarker? = null
-
-    // State tracking variables
     private var earConsecutiveFrames = 0
     private var marConsecutiveFrames = 0
     private var isBlinking = false
@@ -46,70 +41,25 @@ class FaceLandmarkerHelper(
     private var rightEyeStillClosed = false
     private var yawnInProgress = false
 
-    init {
-        setupFaceLandmarker()
-    }
-
-    fun clearFaceLandmarker() {
-        faceLandmarker?.close()
-        faceLandmarker = null
-    }
-
-    fun setupFaceLandmarker() {
-        val baseOptions = BaseOptions.builder().apply {
-            when (currentDelegate) {
-                DELEGATE_CPU -> setDelegate(Delegate.CPU)
-                DELEGATE_GPU -> setDelegate(Delegate.GPU)
-                else -> setDelegate(Delegate.CPU)
-            }
-            setModelAssetPath(MP_FACE_LANDMARKER_TASK)
-        }.build()
-
-        try {
-            val options = FaceLandmarker.FaceLandmarkerOptions.builder()
-                .setBaseOptions(baseOptions)
-                .setMinFaceDetectionConfidence(minFaceDetectionConfidence)
-                .setMinTrackingConfidence(minFaceTrackingConfidence)
-                .setMinFacePresenceConfidence(minFacePresenceConfidence)
-                .setNumFaces(maxNumFaces)
-                .setRunningMode(RunningMode.LIVE_STREAM)
-                .setResultListener(this::processLandmarkerResult)
-                .setErrorListener(this::returnLivestreamError)
-                .build()
-
-            faceLandmarker = FaceLandmarker.createFromOptions(context, options)
-        } catch (e: Exception) {
-            faceLandmarkerHelperListener?.onError("Face Landmarker initialization failed: ${e.message}")
-            Log.e(TAG, "MediaPipe failed to load the task with error: ${e.message}")
-        }
-    }
-
-    fun detectLiveStream(imageProxy: ImageProxy, isFrontCamera: Boolean) {
-        val bitmapBuffer = Bitmap.createBitmap(
-            imageProxy.width,
-            imageProxy.height,
-            Bitmap.Config.ARGB_8888
-        ).apply {
-            copyPixelsFromBuffer(imageProxy.planes[0].buffer)
-        }
-
-        val matrix = Matrix().apply {
-            postRotate(imageProxy.imageInfo.rotationDegrees.toFloat())
-            if (isFrontCamera) {
-                postScale(-1f, 1f, imageProxy.width.toFloat(), imageProxy.height.toFloat())
-            }
-        }
-
-        val rotatedBitmap = Bitmap.createBitmap(
-            bitmapBuffer, 0, 0, bitmapBuffer.width, bitmapBuffer.height,
-            matrix, true
+    interface LandmarkerListener {
+        fun onError(error: String)
+        fun onResults(
+            earValue: Float,
+            marValue: Float,
+            isBlinking: Boolean,
+            isYawning: Boolean,
+            landmarks: List<NormalizedLandmark>,
+            blinkCount: Int,
+            yawnCount: Int,
+            microsleepDuration: Float,
+            yawnDuration: Float
         )
-
-        val mpImage = BitmapImageBuilder(rotatedBitmap).build()
-        faceLandmarker?.detectAsync(mpImage, SystemClock.uptimeMillis())
-        imageProxy.close()
+        fun onBlinkDetected()
+        fun onBlinkComplete()
+        fun onYawnDetected()
+        fun onYawnComplete()
+        fun onEmpty()
     }
-
     private fun processLandmarkerResult(result: FaceLandmarkerResult, input: MPImage) {
         if (result.faceLandmarks().isEmpty()) {
             faceLandmarkerHelperListener?.onEmpty()
@@ -138,11 +88,76 @@ class FaceLandmarkerHelper(
             yawnDuration = yawnDuration
         )
     }
+    private var faceLandmarker: FaceLandmarker? = null //instace from com.google.mediapipe.tasks.vision.facelandmarker.FaceLandmarker
+    fun setupFaceLandmarker() {
+
+        val builder = BaseOptions.builder()
+        when (currentDelegate) {
+            DELEGATE_CPU -> builder.setDelegate(Delegate.CPU)
+            DELEGATE_GPU -> builder.setDelegate(Delegate.GPU)
+            else -> builder.setDelegate(Delegate.CPU)
+        }
+        builder.setModelAssetPath(MP_FACE_LANDMARKER_TASK)
+        val baseOptions = builder.build()
+
+        try {
+            val options = FaceLandmarker.FaceLandmarkerOptions.builder()
+                .setBaseOptions(baseOptions)
+                .setMinFaceDetectionConfidence(minFaceDetectionConfidence)
+                .setMinTrackingConfidence(minFaceTrackingConfidence)
+                .setMinFacePresenceConfidence(minFacePresenceConfidence)
+                .setNumFaces(maxNumFaces)
+                .setRunningMode(RunningMode.LIVE_STREAM)
+                .setResultListener(this::processLandmarkerResult)
+                .setErrorListener(this::returnLivestreamError)
+                .build()
+
+            faceLandmarker = FaceLandmarker.createFromOptions(context, options)
+        } catch (e: Exception) {
+            faceLandmarkerHelperListener?.onError("Face Landmarker initialization failed: ${e.message}")
+            Log.e(TAG, "MediaPipe failed to load the task with error: ${e.message}")
+        }
+    }
+    init {
+        setupFaceLandmarker() //run when the class instantiated
+    }
+    fun clearFaceLandmarker() {
+        faceLandmarker?.close()
+        faceLandmarker = null
+    }
+    fun detectLiveStream(imageProxy: ImageProxy, isFrontCamera: Boolean) {
+        // Create a bitmap image format from the imageproxy frame
+        val bitmapBuffer = Bitmap.createBitmap(
+            imageProxy.width,
+            imageProxy.height,
+            Bitmap.Config.ARGB_8888
+        ) //Creates a blank Bitmap with the same dimensions as the camera frame, using ARGB_8888 format (4 bytes per pixel)
+        bitmapBuffer.copyPixelsFromBuffer(imageProxy.planes[0].buffer) //Copies pixel data from the camera frame's buffer (first plane in YUV format) into our Bitmap
+
+        // Create and configure the matrix
+        val matrix = Matrix() //Creates an empty transformation matrix (for image rotation/flipping)
+        matrix.postRotate(imageProxy.imageInfo.rotationDegrees.toFloat()) //Adds rotation to the matrix based on the device's current orientation (0°, 90°, 180°, or 270°)
+        if (isFrontCamera) {
+            matrix.postScale(-1f, 1f, imageProxy.width.toFloat(), imageProxy.height.toFloat()) //If using front camera, adds horizontal flip (mirror effect) to the matrix at the image's center point
+        }
+
+        // Create rotated bitmap
+        val rotatedBitmap = Bitmap.createBitmap(
+            bitmapBuffer, 0, 0, bitmapBuffer.width, bitmapBuffer.height,
+            matrix, true
+        )//Applies the matrix transformations to create a new Bitmap that's properly oriented
+        //Parameters: source bitmap, start X/Y, width/height, transformation matrix, and filter flag
+
+        val mpImage = BitmapImageBuilder(rotatedBitmap).build() //Converts the Android Bitmap to a MediaPipe Image object for processing
+        faceLandmarker?.detectAsync(mpImage, SystemClock.uptimeMillis())//If faceLandmarker exists, runs face detection asynchronously using current timestamp
+
+        imageProxy.close() //Releases the camera frame resources (important to prevent memory leaks)
+
+    }
 
     private fun detectBlinks(leftEAR: Float, rightEAR: Float, currentEAR: Float) {
         val currentLeftEyeClosed = leftEAR < earThreshold
         val currentRightEyeClosed = rightEAR < earThreshold
-
         if (currentLeftEyeClosed && currentRightEyeClosed) {
             if (!(leftEyeStillClosed && rightEyeStillClosed)) {
                 // Start of eye closure
@@ -286,24 +301,5 @@ class FaceLandmarkerHelper(
         val MOUTH_INDICES = listOf(61, 291, 13, 14)
     }
 
-    interface LandmarkerListener {
-        fun onError(error: String)
-        fun onResults(
-            earValue: Float,
-            marValue: Float,
-            isBlinking: Boolean,
-            isYawning: Boolean,
-            landmarks: List<NormalizedLandmark>,
-            blinkCount: Int,
-            yawnCount: Int,
-            microsleepDuration: Float,
-            yawnDuration: Float
-        )
-        fun onBlinkDetected()
-        fun onBlinkComplete()
-        fun onYawnDetected()
-        fun onYawnComplete()
-        fun onEmpty()
-    }
 }
 

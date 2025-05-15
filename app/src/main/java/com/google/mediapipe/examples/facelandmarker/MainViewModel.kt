@@ -25,13 +25,6 @@ class MainViewModel : ViewModel() {
         _yawnCount.value++
     }
 
-    // Removed incrementDrowsinessAlert()
 
-    fun resetCounters() {
-        _blinkCount.value = 0
-        _yawnCount.value = 0
-        _drowsinessAlerts.value = 0
 
-        // Removed reset for drowsinessAlerts
-    }
 }
