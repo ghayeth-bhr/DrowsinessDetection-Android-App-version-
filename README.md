@@ -1,38 +1,100 @@
-# MediaPipe Tasks Face Landmark Detection Android Demo
+# Real-time Driver Drowsiness Detection App
 
-### Overview
 
-This is a camera app that can  detects face landmarks either from continuous camera frames seen by your device's front camera, an image, or a video from the device's gallery using a custom **task** file.
+---
 
-The task file is downloaded by a Gradle script when you build and run the app. You don't need to do any additional steps to download task files into the project explicitly unless you wish to use your own landmark detection task. If you do use your own task file, place it into the app's *assets* directory.
 
-This application should be run on a physical Android device to take advantage of the camera.
+## 🚨 Problem Statement
 
-## Build the demo using Android Studio
+According to Stadies , drowsiness at the wheel causes around 20% of fatal road accidents in Europe. Traditional solutions such as self-assessment or physical sensors are limited.
 
-### Prerequisites
+---
 
-*   The **[Android Studio](https://developer.android.com/studio/index.html)** IDE. This sample has been tested on Android Studio Dolphin.
+##  Proposed Solution
 
-*   A physical Android device with a minimum OS version of SDK 24 (Android 7.0 -
-    Nougat) with developer mode enabled. The process of enabling developer mode
-    may vary by device.
+A mobile application using the **front camera** to detect signs of drowsiness such as **eye closure** and **yawning** via **MediaPipe** and **EAR/MAR algorithms**, issuing real-time alerts.
 
-### Building
+---
 
-*   Open Android Studio. From the Welcome screen, select Open an existing
-    Android Studio project.
+##  Methodology
 
-*   From the Open File or Project window that appears, navigate to and select
-    the mediapipe/examples/face_landmarker/android directory. Click OK. You may
-    be asked if you trust the project. Select Trust.
+### What is Needed?
 
-*   If it asks you to do a Gradle Sync, click OK.
+- Access to a front-facing camera
+- Detection of facial landmarks
+- Eye Aspect Ratio (EAR) and Mouth Aspect Ratio (MAR) calculations
 
-*   With your Android device connected to your computer and developer mode
-    enabled, click on the green Run arrow in Android Studio.
+### How Drowsiness is Detected
 
-### Models used
+- Monitor EAR and MAR values over time.
+- If eyes or mouth stay closed/open beyond thresholds, trigger an alert.
 
-Downloading, extraction, and placing the models into the *assets* folder is
-managed automatically by the **download.gradle** file.
+#### Key Formulas
+
+- **EAR (Eye Aspect Ratio):** Detects prolonged eye closure
+- **MAR (Mouth Aspect Ratio):** Detects yawning
+- If EAR < threshold for X frames → microsleep detected
+- If MAR > threshold for Y frames → yawn detected
+
+---
+
+##  Tools and Frameworks
+
+- **MediaPipe Face Landmarker**
+- **Android Studio**
+- **Kotlin (PermissionsFragment.kt, CameraFragment.kt, etc.)**
+
+---
+
+##  Application Architecture
+
+- **PermissionsFragment.kt** – Manages camera permissions
+- **CameraFragment.kt** – Captures camera frames
+- **FaceLandmarkerHelper.kt** – Core logic for EAR/MAR detection
+- **OverlayView.kt** – Displays facial landmarks and alerts
+- **MainViewModel.kt** – Manages state and stats
+
+---
+
+##  Data Flow
+
+1. App starts → asks for camera permission
+2. On approval → camera starts in `CameraFragment.kt`
+3. Frames go to `FaceLandmarkerHelper` → EAR/MAR computed
+4. If drowsiness is detected → alert displayed on `OverlayView.kt`
+5. Stats persist via `MainViewModel.kt`
+
+---
+
+##  Customization
+
+The user can adjust:
+- EAR/MAR thresholds
+- Alert sensitivity based on personal facial features
+
+---
+
+##  Results
+
+- Real-time video processing
+- Accurate EAR/MAR calculations
+- Customizable thresholds
+- Clear visual feedback
+- Reliable state management
+
+---
+
+##  Live Demonstration
+
+![Figure](./Demo.png)
+
+
+---
+
+## 🧾 Final Conclusion
+
+This project proves that a **smartphone-based** vision system is a viable, cost-effective alternative to expensive in-vehicle systems. It democratizes road safety tech by using only a phone and open-source tools.
+
+> “Real-time App Driver Drowsiness Detection” is a step forward in making roads safer for everyone.
+
+---
