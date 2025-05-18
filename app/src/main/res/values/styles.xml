@@ -17,21 +17,36 @@
 <resources>
 
     <!-- Base application theme. -->
-    <style name="AppTheme" parent="Theme.MaterialComponents.Light.NoActionBar" >
+    <style name="AppTheme" parent="Theme.MaterialComponents.DayNight.NoActionBar">
         <!-- Primary brand color. -->
-        <item name="colorPrimary">@color/mp_color_primary</item>
-        <item name="colorPrimaryVariant">@color/mp_color_primary_variant</item>
-        <item name="colorPrimaryDark">@color/mp_color_primary_dark</item>
+        <item name="colorPrimary">@color/primary</item>
+        <item name="colorPrimaryVariant">@color/primary_dark</item>
+        <item name="colorOnPrimary">@color/white</item>
         <!-- Secondary brand color. -->
-        <item name="colorSecondary">@color/mp_color_secondary</item>
-        <item name="colorSecondaryVariant">@color/mp_color_secondary_variant</item>
-        <item name="colorError">@color/mp_color_error</item>
+        <item name="colorSecondary">@color/accent</item>
+        <item name="colorOnSecondary">@color/black</item>
         <!-- Status bar color. -->
-        <item name="android:statusBarColor">?attr/colorPrimary</item>
-        <!-- Customize your theme here. -->
+        <item name="android:statusBarColor">@color/background</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <!-- Background colors. -->
+        <item name="android:windowBackground">@color/background</item>
+        <item name="colorSurface">@color/surface</item>
+        <item name="colorOnSurface">@color/white</item>
+        <!-- Error colors. -->
+        <item name="colorError">@color/error</item>
+        <item name="colorOnError">@color/white</item>
     </style>
 
-    <style name="BottomSheetSpinnerItemStyle" parent="Widget.AppCompat.Light.DropDownItem.Spinner">
+    <style name="BottomSheetSpinnerStyle" parent="Widget.AppCompat.Spinner">
+        <item name="android:background">@null</item>
+        <item name="android:layout_marginStart">10dp</item>
+    </style>
+
+    <style name="AlertTextStyle">
+        <item name="android:textSize">24sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:padding">8dp</item>
+        <item name="android:background">#80000000</item>
         <item name="android:textSize">@dimen/bottom_sheet_text_size</item>
     </style>
 

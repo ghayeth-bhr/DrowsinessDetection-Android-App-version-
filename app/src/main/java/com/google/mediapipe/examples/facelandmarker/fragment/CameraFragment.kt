@@ -22,7 +22,8 @@ import java.util.concurrent.ExecutorService // Utilisé pour exécuter des tâch
 import java.util.concurrent.Executors // Fournit des méthodes pour créer des ExecutorService.
 import kotlin.math.max // Fonction pour obtenir le maximum de deux nombres.
 import kotlin.math.min // Fonction pour obtenir le minimum de deux nombres.
-
+import android.media.MediaPlayer // Importé pour la lecture de sons
+import android.media.RingtoneManager // Importé pour obtenir l'URI du son de notification par défaut
 
 // Déclare la classe CameraFragment, qui hérite de Fragment et implémente l'interface LandmarkerListener de FaceLandmarkerHelper.
 class CameraFragment : Fragment(), FaceLandmarkerHelper.LandmarkerListener {
@@ -36,10 +37,12 @@ class CameraFragment : Fragment(), FaceLandmarkerHelper.LandmarkerListener {
     private val viewModel: MainViewModel by activityViewModels()
     // Executor pour exécuter les tâches de la caméra sur un thread séparé. Initialisé plus tard.
     private lateinit var cameraExecutor: ExecutorService
-    // Seuil pour le ratio d'ouverture de l'œil (EAR). Initialisé avec la valeur par défaut.
-    private var earThreshold = FaceLandmarkerHelper.DEFAULT_EAR_THRESHOLD
-    // Seuil pour le ratio d'ouverture de la bouche (MAR). Initialisé avec la valeur par défaut.
-    private var marThreshold = FaceLandmarkerHelper.DEFAULT_MAR_THRESHOLD
+    // MediaPlayer pour jouer le son d'alerte
+    private var mediaPlayer: MediaPlayer? = null
+    // Dernier moment où un son d'alerte a été joué
+    private var lastAlertTime = 0L
+    // Délai de refroidissement entre les alertes
+    private val ALERT_COOLDOWN = 3000L // 3 secondes
 
     // Variables pour suivre l'état de la somnolence.
     private var microsleepDuration: Float = 0f // Durée du micro-sommeil détecté.
@@ -57,6 +60,10 @@ class CameraFragment : Fragment(), FaceLandmarkerHelper.LandmarkerListener {
     ): View {
         // Gonfle le layout 'fragment_camera.xml' en utilisant le View Binding et l'assigne à _binding.
         _binding = FragmentCameraBinding.inflate(inflater, container, false)
+        // Initialise MediaPlayer avec le son de notification par défaut
+        val notification = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+        mediaPlayer = MediaPlayer.create(requireContext(), notification)
+        mediaPlayer?.setVolume(1.0f, 1.0f)
         // Retourne la vue racine du layout gonflé.
         return binding.root
     }
@@ -80,52 +87,36 @@ class CameraFragment : Fragment(), FaceLandmarkerHelper.LandmarkerListener {
     }
     // Méthode privée pour configurer les contrôles des seuils dans la BottomSheet.
     private fun setupThresholdControls() {
-        // Initialise les variables de seuil avec les valeurs par défaut définies dans FaceLandmarkerHelper.
-        earThreshold = FaceLandmarkerHelper.DEFAULT_EAR_THRESHOLD
-        marThreshold = FaceLandmarkerHelper.DEFAULT_MAR_THRESHOLD
-
-        // Met à jour l'interface utilisateur (les TextViews) pour afficher les valeurs initiales des seuils formatées.
-        binding.bottomSheetLayout.earThresholdValue.text = "%.2f".format(earThreshold)
-        binding.bottomSheetLayout.marThresholdValue.text = "%.2f".format(marThreshold)
-
         // Définit un écouteur de clic pour le bouton '+' du seuil EAR.
         binding.bottomSheetLayout.earThresholdPlus.setOnClickListener {
             // Augmente le seuil EAR de 0.01, avec une limite maximale de 0.5.
-            earThreshold = min(earThreshold + 0.01f, 0.5f)
+            faceLandmarkerHelper.earThreshold = min(faceLandmarkerHelper.earThreshold + 0.01f, 0.5f)
             // Met à jour le TextView avec la nouvelle valeur.
-            binding.bottomSheetLayout.earThresholdValue.text = "%.2f".format(earThreshold)
-            // Met à jour la valeur du seuil dans l'instance de FaceLandmarkerHelper.
-            faceLandmarkerHelper?.earThreshold = earThreshold
+            binding.bottomSheetLayout.earThresholdValue.text = "%.2f".format(faceLandmarkerHelper.earThreshold)
         }
 
         // Définit un écouteur de clic pour le bouton '-' du seuil EAR.
         binding.bottomSheetLayout.earThresholdMinus.setOnClickListener {
             // Diminue le seuil EAR de 0.01, avec une limite minimale de 0.05.
-            earThreshold = max(earThreshold - 0.01f, 0.05f)
+            faceLandmarkerHelper.earThreshold = max(faceLandmarkerHelper.earThreshold - 0.01f, 0.05f)
             // Met à jour le TextView.
-            binding.bottomSheetLayout.earThresholdValue.text = "%.2f".format(earThreshold)
-            // Met à jour la valeur dans FaceLandmarkerHelper.
-            faceLandmarkerHelper?.earThreshold = earThreshold
+            binding.bottomSheetLayout.earThresholdValue.text = "%.2f".format(faceLandmarkerHelper.earThreshold)
         }
 
         // Définit un écouteur de clic pour le bouton '+' du seuil MAR.
         binding.bottomSheetLayout.marThresholdPlus.setOnClickListener {
             // Augmente le seuil MAR de 0.01, avec une limite maximale de 1.0.
-            marThreshold = min(marThreshold + 0.01f, 1.0f)
+            faceLandmarkerHelper.marThreshold = min(faceLandmarkerHelper.marThreshold + 0.01f, 1.0f)
             // Met à jour le TextView.
-            binding.bottomSheetLayout.marThresholdValue.text = "%.2f".format(marThreshold)
-            // Met à jour la valeur dans FaceLandmarkerHelper.
-            faceLandmarkerHelper?.marThreshold = marThreshold
+            binding.bottomSheetLayout.marThresholdValue.text = "%.2f".format(faceLandmarkerHelper.marThreshold)
         }
 
         // Définit un écouteur de clic pour le bouton '-' du seuil MAR.
         binding.bottomSheetLayout.marThresholdMinus.setOnClickListener {
             // Diminue le seuil MAR de 0.01, avec une limite minimale de 0.1.
-            marThreshold = max(marThreshold - 0.01f, 0.1f)
+            faceLandmarkerHelper.marThreshold = max(faceLandmarkerHelper.marThreshold - 0.01f, 0.1f)
             // Met à jour le TextView.
-            binding.bottomSheetLayout.marThresholdValue.text = "%.2f".format(marThreshold)
-            // Met à jour la valeur dans FaceLandmarkerHelper.
-            faceLandmarkerHelper?.marThreshold = marThreshold
+            binding.bottomSheetLayout.marThresholdValue.text = "%.2f".format(faceLandmarkerHelper.marThreshold)
         }
     }
     // Méthode privée pour initialiser et configurer la caméra.
@@ -139,11 +130,6 @@ class CameraFragment : Fragment(), FaceLandmarkerHelper.LandmarkerListener {
             // Lie les cas d'utilisation de la caméra (aperçu, analyse d'image) au cycle de vie.
             bindCameraUseCases(cameraProvider)
 
-            // (Ré)Initialise FaceLandmarkerHelper ici aussi, potentiellement redondant avec onViewCreated mais assure qu'il est prêt après la caméra.
-            faceLandmarkerHelper = FaceLandmarkerHelper(
-                context = requireContext(),
-                faceLandmarkerHelperListener = this
-            )
             // Exécute le listener sur le thread principal de l'interface utilisateur.
         }, ContextCompat.getMainExecutor(requireContext()))
     }
@@ -206,24 +192,30 @@ class CameraFragment : Fragment(), FaceLandmarkerHelper.LandmarkerListener {
             this.microsleepDuration = microsleepDuration
             this.yawnDuration = yawnDuration
 
+            // Détermine le texte d'alerte en fonction des conditions de micro-sommeil ou de bâillement prolongé.
+            val alertText = when {
+                microsleepDuration > 0.7f -> "ALERT: Microsleep (${microsleepDuration.format(1)}s)"
+                isYawning && yawnDuration > 2.0f -> "ALERT: Yawn (${yawnDuration.format(1)}s)"
+                else -> ""
+            }
+
             // Met à jour la vue de superposition (OverlayView) avec les nouvelles données de somnolence.
             binding.overlay.setDrowsinessData(
                 ear = earValue, // Transmet la valeur EAR.
                 mar = marValue, // Transmet la valeur MAR.
-                // Détermine si l'état est somnolent (bâillement ou micro-sommeil > 0.7s).
                 drowsy = isYawning || microsleepDuration > 0.7f,
-                newLandmarks = landmarks, // Transmet les points de repère.
-                blinkCount = blinkCount, // Transmet le compteur de clignements.
-                yawnCount = yawnCount, // Transmet le compteur de bâillements.
-                microsleepDuration = microsleepDuration, // Transmet la durée du micro-sommeil.
-                yawnDuration = yawnDuration, // Transmet la durée du bâillement.
-                // Définit le texte d'alerte en fonction des conditions de micro-sommeil ou de bâillement prolongé.
-                alertText = when {
-                    microsleepDuration > 0.7f -> "ALERT: Microsleep (${microsleepDuration.format(1)}s)"
-                    isYawning && yawnDuration > 2.0f -> "ALERT: Yawn (${yawnDuration.format(1)}s)"
-                    else -> "" // Pas d'alerte.
-                }
+                newLandmarks = landmarks,
+                blinkCount = blinkCount,
+                yawnCount = yawnCount,
+                microsleepDuration = microsleepDuration,
+                yawnDuration = yawnDuration,
+                alertText = alertText
             )
+
+            // Play alert sound only when microsleep is detected
+            if (microsleepDuration > 0.7f) {
+                playAlertSound()
+            }
 
             // Met à jour les compteurs affichés à l'écran.
             updateCounters()
@@ -275,6 +267,20 @@ class CameraFragment : Fragment(), FaceLandmarkerHelper.LandmarkerListener {
         }
     }
 
+    // Méthode pour jouer le son d'alerte
+    private fun playAlertSound() {
+        val currentTime = System.currentTimeMillis()
+        if (currentTime - lastAlertTime >= ALERT_COOLDOWN) {
+            mediaPlayer?.let { player ->
+                if (!player.isPlaying) {
+                    player.seekTo(0) // Reset to start
+                    player.start()
+                    lastAlertTime = currentTime
+                }
+            }
+        }
+    }
+
     // Méthode de l'interface LandmarkerListener, appelée en cas d'erreur dans FaceLandmarkerHelper.
     override fun onError(error: String) {
         // Exécute sur le thread UI.
@@ -308,6 +314,9 @@ class CameraFragment : Fragment(), FaceLandmarkerHelper.LandmarkerListener {
         cameraExecutor.shutdown()
         // Libère les ressources utilisées par FaceLandmarkerHelper.
         faceLandmarkerHelper.clearFaceLandmarker()
+        // Libère les ressources du MediaPlayer
+        mediaPlayer?.release()
+        mediaPlayer = null
         // Appelle l'implémentation de la superclasse.
         super.onDestroyView()
     }
